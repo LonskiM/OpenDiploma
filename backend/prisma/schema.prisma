@@ -1,0 +1,133 @@
+generator client {
+ provider = "prisma-client-js"
+}
+
+datasource db {
+ provider = "postgresql"
+}
+
+model Role {
+ id    Int     @id @default(autoincrement())
+ name  String  @unique
+ users User[]
+}
+
+model User {
+ id           Int      @id @default(autoincrement())
+ name         String
+ email        String   @unique
+ passwordHash String
+  avatarUrl    String?
+ roleId       Int
+ role         Role     @relation(fields: [roleId], references: [id])
+ courses      Course[] @relation("AuthorCourses")
+ progress     UserProgress[]
+ testAttempts TestAttempt[]
+ createdAt    DateTime @default(now())
+  lessons      UserLesson[]
+  taughtCourses CourseTeacher[]
+}
+
+model Course {
+ id          Int      @id @default(autoincrement())
+ title       String
+ description String
+  status      String   @default("PENDING")
+ authorId    Int
+ author      User     @relation("AuthorCourses", fields: [authorId], references: [id])
+  teachers    CourseTeacher[]
+ lessons     Lesson[]
+  progress    UserProgress[]
+ createdAt   DateTime @default(now())
+}
+
+model Lesson {
+ id         Int     @id @default(autoincrement())
+ title      String
+ content    String
+ orderIndex Int
+ courseId   Int
+ course     Course  @relation(fields: [courseId], references: [id])
+ tests      Test[]
+ users UserLesson[]
+}
+
+model Test {
+ id       Int        @id @default(autoincrement())
+ title    String
+ lessonId Int
+ lesson   Lesson     @relation(fields: [lessonId], references: [id])
+ questions Question[]
+ attempts  TestAttempt[]
+}
+
+model Question {
+ id      Int      @id @default(autoincrement())
+ text    String
+ type    String
+ testId  Int
+ test    Test     @relation(fields: [testId], references: [id])
+ answers Answer[]
+}
+
+model Answer {
+ id         Int      @id @default(autoincrement())
+ text       String
+ isCorrect  Boolean
+ questionId Int
+ question   Question @relation(fields: [questionId], references: [id])
+}
+
+model TestAttempt {
+ id        Int      @id @default(autoincrement())
+ userId    Int
+ testId    Int
+ score     Int
+ createdAt DateTime @default(now())
+
+ user   User   @relation(fields: [userId], references: [id])
+ test   Test   @relation(fields: [testId], references: [id])
+ answers TestAnswer[]
+}
+
+model TestAnswer {
+ id         Int @id @default(autoincrement())
+ attemptId  Int
+ questionId Int
+ answerId   Int
+
+ attempt  TestAttempt @relation(fields: [attemptId], references: [id])
+}
+
+model UserProgress {
+ id               Int @id @default(autoincrement())
+ userId           Int
+ courseId         Int
+ completedLessons Int
+ progressPercent  Int
+
+ user   User   @relation(fields: [userId], references: [id])
+ course Course @relation(fields: [courseId], references: [id])
+}
+
+model UserLesson {
+  id        Int @id @default(autoincrement())
+  userId    Int
+  lessonId  Int
+
+  user   User   @relation(fields: [userId], references: [id])
+  lesson Lesson @relation(fields: [lessonId], references: [id])
+
+  @@unique([userId, lessonId])
+}
+
+model CourseTeacher {
+  id       Int    @id @default(autoincrement())
+  courseId Int
+  userId   Int
+
+  course Course @relation(fields: [courseId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@unique([courseId, userId])
+}
