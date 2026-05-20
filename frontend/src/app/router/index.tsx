@@ -12,8 +12,12 @@ import LessonPage from "@/pages/LessonPage";
 import { getMe } from "@/features/auth/api/authApi";
 import { logout, setAuth } from "@/features/auth/model/authSlice";
 import type { RootState } from "@/app/store/store";
+import { AppLayout } from "@/widgets/layout";
+import { useTranslation } from "@/shared/lib/i18n";
+import LoadingState from "@/shared/ui/LoadingState";
 
 const AuthBootstrap = () => {
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(true);
     const dispatch = useDispatch();
     const token = useSelector((state: RootState) => state.auth.token);
@@ -45,7 +49,11 @@ const AuthBootstrap = () => {
     }, [dispatch, token, user]);
 
     if (loading) {
-        return <main className="page">Loading session...</main>;
+        return (
+            <main className="auth-page">
+                <LoadingState message={t("common.loadingSession")} />
+            </main>
+        );
     }
 
     return null;
@@ -56,58 +64,20 @@ export const AppRouter = () => {
         <BrowserRouter>
             <AuthBootstrap />
             <Routes>
-                <Route
-                    path="/"
-                    element={<Navigate to="/courses" replace />}
-                />
-                <Route
-                    path="/login"
-                    element={<LoginPage />}
-                />
-                <Route
-                    path="/register"
-                    element={<RegisterPage />}
-                />
-                <Route
-                    path="/courses"
-                    element={
-                        <ProtectedRoute>
-                            <CoursesPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="/courses/:id"
-                    element={
-                        <ProtectedRoute>
-                            <CoursePage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="/profile"
-                    element={
-                        <ProtectedRoute>
-                            <ProfilePage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="/tests/:id"
-                    element={
-                        <ProtectedRoute>
-                            <TestPage />
-                        </ProtectedRoute>
-                    }
-                />
-                <Route
-                    path="/lessons/:id"
-                    element={
-                        <ProtectedRoute>
-                            <LessonPage />
-                        </ProtectedRoute>
-                    }
-                />
+                <Route path="/" element={<Navigate to="/courses" replace />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+
+                <Route element={<ProtectedRoute />}>
+                    <Route element={<AppLayout />}>
+                        <Route path="/courses" element={<CoursesPage />} />
+                        <Route path="/courses/:id" element={<CoursePage />} />
+                        <Route path="/profile" element={<ProfilePage />} />
+                        <Route path="/tests/:id" element={<TestPage />} />
+                        <Route path="/lessons/:id" element={<LessonPage />} />
+                    </Route>
+                </Route>
+
                 <Route path="*" element={<Navigate to="/courses" replace />} />
             </Routes>
         </BrowserRouter>

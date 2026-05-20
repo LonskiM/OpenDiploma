@@ -1,0 +1,6 @@
+@import url("https://fonts.cdnfonts.com/css/gilroy-bold");
+
+:root {
+  --font-sans: "Gilroy", "DM Sans", system-ui, sans-serif;
+  --font-mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+}

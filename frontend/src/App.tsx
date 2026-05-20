@@ -1,13 +1,12 @@
-import './App.css'
-import { StoreProvider } from "./app/providers/StoreProvider";
+import { AppProviders } from "./app/providers/AppProviders";
 import { AppRouter } from "./app/router";
 
 function App() {
-  return (
-      <StoreProvider>
-        <AppRouter />
-      </StoreProvider>
-  );
+    return (
+        <AppProviders>
+            <AppRouter />
+        </AppProviders>
+    );
 }
 
 export default App;

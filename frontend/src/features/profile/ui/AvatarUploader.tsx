@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "@/shared/lib/i18n";
 
 interface AvatarUploaderProps {
     avatarUrl?: string;
@@ -6,6 +7,7 @@ interface AvatarUploaderProps {
 }
 
 const AvatarUploader = ({ avatarUrl, onUpload }: AvatarUploaderProps) => {
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -21,23 +23,23 @@ const AvatarUploader = ({ avatarUrl, onUpload }: AvatarUploaderProps) => {
             });
             await onUpload(dataUrl);
         } catch (uploadError) {
-            setError(uploadError instanceof Error ? uploadError.message : "Failed to upload avatar.");
+            setError(uploadError instanceof Error ? uploadError.message : t("messages.uploadAvatarFailed"));
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="form-block">
-            <img
-                src={avatarUrl || "https://placehold.co/96x96?text=Avatar"}
-                alt="User avatar"
-                width={96}
-                height={96}
-                style={{ borderRadius: "50%", objectFit: "cover" }}
-            />
-            <label className="ghost-button" style={{ width: "fit-content" }}>
-                {loading ? "Uploading..." : "Upload new avatar"}
+        <div className="avatar-uploader">
+            {avatarUrl ? (
+                <img src={avatarUrl} alt="" className="avatar avatar-lg" />
+            ) : (
+                <span className="avatar avatar-lg" aria-hidden>
+                    ?
+                </span>
+            )}
+            <label className="btn-secondary" style={{ width: "fit-content", cursor: "pointer" }}>
+                {loading ? t("profile.uploading") : t("profile.uploadAvatar")}
                 <input
                     type="file"
                     accept="image/*"

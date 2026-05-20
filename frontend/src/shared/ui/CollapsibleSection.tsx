@@ -14,7 +14,7 @@ const CollapsibleSection = ({
     const [open, setOpen] = useState(defaultOpen);
 
     return (
-        <section className="card">
+        <section className="collapse-section">
             <button
                 type="button"
                 className="collapse-toggle"
@@ -22,7 +22,9 @@ const CollapsibleSection = ({
                 aria-expanded={open}
             >
                 <span>{title}</span>
-                <span>{open ? "−" : "+"}</span>
+                <span className="collapse-toggle-icon" aria-hidden>
+                    {open ? "▾" : "▸"}
+                </span>
             </button>
             {open ? <div className="collapse-content">{children}</div> : null}
         </section>

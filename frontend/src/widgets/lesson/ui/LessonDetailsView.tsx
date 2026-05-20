@@ -3,8 +3,11 @@ import { Link, useParams } from "react-router-dom";
 import { getLessonById, type LessonDetails } from "@/features/course/api/courseApi";
 import { completeLesson } from "@/features/progress/api/progressApi";
 import { getApiErrorMessage } from "@/shared/lib/getApiErrorMessage";
+import { useTranslation } from "@/shared/lib/i18n";
+import LoadingState from "@/shared/ui/LoadingState";
 
 const LessonDetailsView = () => {
+    const { t } = useTranslation();
     const { id } = useParams();
     const [lesson, setLesson] = useState<LessonDetails | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -16,7 +19,7 @@ const LessonDetailsView = () => {
         const loadLesson = async () => {
             const lessonId = Number(id);
             if (!id || !Number.isInteger(lessonId) || lessonId <= 0) {
-                setError("Invalid lesson id.");
+                setError(t("lesson.invalidId"));
                 setLoading(false);
                 return;
             }
@@ -25,14 +28,14 @@ const LessonDetailsView = () => {
                 const data = await getLessonById(lessonId);
                 setLesson(data);
             } catch (loadError) {
-                setError(getApiErrorMessage(loadError, "Failed to load lesson."));
+                setError(getApiErrorMessage(loadError, t("lesson.loadFailed")));
             } finally {
                 setLoading(false);
             }
         };
 
         void loadLesson();
-    }, [id]);
+    }, [id, t]);
 
     const onCompleteLesson = async () => {
         if (!lesson) {
@@ -47,55 +50,96 @@ const LessonDetailsView = () => {
             if (typeof data?.message === "string") {
                 setCompleteMessage(data.message);
             } else {
-                setCompleteMessage("Lesson marked as completed.");
+                setCompleteMessage(t("lesson.completed"));
             }
         } catch (submitError) {
-            setError(getApiErrorMessage(submitError, "Failed to update lesson progress."));
+            setError(getApiErrorMessage(submitError, t("lesson.completeFailed")));
         } finally {
             setIsCompleting(false);
         }
     };
 
     if (loading) {
-        return <main className="page">Loading lesson...</main>;
+        return (
+            <main className="page">
+                <LoadingState message={t("lesson.loading")} />
+            </main>
+        );
     }
 
     if (error || !lesson) {
         return (
             <main className="page">
-                <p className="auth-error">{error ?? "Lesson not found."}</p>
-                <Link to="/courses">Back to courses</Link>
+                <p className="auth-error">{error ?? t("lesson.notFound")}</p>
+                <Link to="/courses" className="btn-secondary">
+                    {t("common.backToCourses")}
+                </Link>
             </main>
         );
     }
 
     return (
         <main className="page">
+            <nav className="breadcrumb" aria-label="Breadcrumb">
+                <Link to="/courses">{t("courses.title")}</Link>
+                <span className="breadcrumb-sep">/</span>
+                <Link to={`/courses/${lesson.courseId}`}>{t("common.backToCourse")}</Link>
+                <span className="breadcrumb-sep">/</span>
+                <span className="breadcrumb-current">{lesson.title}</span>
+            </nav>
+
             <header className="page-header">
-                <h1 className="page-title">{lesson.title}</h1>
-                <Link to={`/courses/${lesson.courseId}`}>Back to course</Link>
+                <div>
+                    <h1 className="page-title">{lesson.title}</h1>
+                    <p className="page-subtitle">{t("lesson.subtitle")}</p>
+                </div>
             </header>
 
-            <section className="card">
-                <p>{lesson.content}</p>
+            <section className="card page-section">
+                <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.7 }}>{lesson.content}</p>
             </section>
 
-            <section className="card">
-                <h2>Actions</h2>
-                <button type="button" onClick={onCompleteLesson} disabled={isCompleting}>
-                    {isCompleting ? "Saving..." : "Mark lesson as completed"}
+            <section className="card page-section">
+                <h2 className="page-section-title" style={{ border: "none", margin: 0, padding: 0 }}>
+                    {t("lesson.progress")}
+                </h2>
+                <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={onCompleteLesson}
+                    disabled={isCompleting}
+                >
+                    {isCompleting ? t("lesson.saving") : t("lesson.markComplete")}
                 </button>
-                {completeMessage ? <p>{completeMessage}</p> : null}
+                {completeMessage ? <p className="alert-success">{completeMessage}</p> : null}
+                {error ? <p className="auth-error">{error}</p> : null}
             </section>
 
-            <section className="card">
-                <h2>Tests for this lesson</h2>
-                {lesson.tests.length === 0 ? <p>No tests yet.</p> : null}
-                {lesson.tests.map((test) => (
-                    <p key={test.id}>
-                        <Link to={`/tests/${test.id}`}>Start test: {test.title}</Link>
-                    </p>
-                ))}
+            <section className="page-section">
+                <h2 className="page-section-title">{t("lesson.tests")}</h2>
+                {lesson.tests.length === 0 ? (
+                    <div className="empty">
+                        <p className="empty-title">{t("lesson.noTests")}</p>
+                        <p className="empty-desc">{t("lesson.noTestsDesc")}</p>
+                    </div>
+                ) : (
+                    <div className="lesson-list">
+                        {lesson.tests.map((test) => (
+                            <Link
+                                key={test.id}
+                                to={`/tests/${test.id}`}
+                                className="lesson-item"
+                            >
+                                <span className="lesson-number">T</span>
+                                <div className="lesson-info">
+                                    <p className="lesson-title">{test.title}</p>
+                                    <p className="lesson-meta">{t("lesson.startTest")}</p>
+                                </div>
+                                <span className="text-muted">→</span>
+                            </Link>
+                        ))}
+                    </div>
+                )}
             </section>
         </main>
     );

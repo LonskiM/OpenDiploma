@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "@/app/store/store";
-import { logout, setUser } from "@/features/auth/model/authSlice";
+import { setUser } from "@/features/auth/model/authSlice";
 import { updateMyAvatar } from "@/features/auth/api/authApi";
 import {
     getMyProgress,
@@ -34,6 +33,7 @@ import {
 } from "@/features/admin/api/adminApi";
 import { AvatarUploader } from "@/features/profile";
 import CollapsibleSection from "@/shared/ui/CollapsibleSection";
+import { useTranslation } from "@/shared/lib/i18n";
 import { isAdminRole, isTeacherRole, ROLE_IDS } from "@/shared/lib/roles";
 
 interface TestDraftQuestion {
@@ -49,6 +49,7 @@ const createEmptyQuestion = (): TestDraftQuestion => ({
 });
 
 const ProfileDashboard = () => {
+    const { t } = useTranslation();
     const user = useSelector((state: RootState) => state.auth.user);
     const [progress, setProgress] = useState<ProfileProgressResponse | null>(null);
     const [loading, setLoading] = useState(true);
@@ -78,7 +79,6 @@ const ProfileDashboard = () => {
     const [adminError, setAdminError] = useState<string | null>(null);
     const [adminMessage, setAdminMessage] = useState<string | null>(null);
     const dispatch = useDispatch();
-    const navigate = useNavigate();
     const isTeacher = isTeacherRole(user?.roleId);
     const isAdmin = isAdminRole(user?.roleId);
 
@@ -109,7 +109,7 @@ const ProfileDashboard = () => {
                     setSelectedTestId(data.testAttempts[0].test.id);
                 }
             } catch (loadError) {
-                setError(getApiErrorMessage(loadError, "Failed to load profile progress."));
+                setError(getApiErrorMessage(loadError, t("profile.loadProgressFailed")));
             } finally {
                 setLoading(false);
             }
@@ -127,7 +127,7 @@ const ProfileDashboard = () => {
             try {
                 await reloadManageableCourses();
             } catch (loadError) {
-                setTeacherError(getApiErrorMessage(loadError, "Failed to load teacher courses."));
+                setTeacherError(getApiErrorMessage(loadError, t("messages.loadCoursesFailed")));
             }
         };
 
@@ -145,7 +145,7 @@ const ProfileDashboard = () => {
                 setAdminUsers(usersData);
                 setPendingCourses(pendingData);
             } catch (loadError) {
-                setAdminError(getApiErrorMessage(loadError, "Failed to load admin panel data."));
+                setAdminError(getApiErrorMessage(loadError, t("messages.loadAdminFailed")));
             }
         };
 
@@ -168,7 +168,7 @@ const ProfileDashboard = () => {
                     setSelectedLessonId(null);
                 }
             } catch (loadError) {
-                setTeacherError(getApiErrorMessage(loadError, "Failed to load course lessons."));
+                setTeacherError(getApiErrorMessage(loadError, t("messages.loadLessonsFailed")));
             }
         };
 
@@ -196,7 +196,7 @@ const ProfileDashboard = () => {
                 const attempts = await getCourseTestAttempts(selectedCourseId);
                 setCourseAttempts(attempts);
             } catch (loadError) {
-                setTeacherError(getApiErrorMessage(loadError, "Failed to load course test attempts."));
+                setTeacherError(getApiErrorMessage(loadError, t("messages.loadAttemptsFailed")));
             }
         };
 
@@ -212,17 +212,12 @@ const ProfileDashboard = () => {
         setSelectedLessonTestId(selectedLesson.tests[0].id);
     }, [teacherLessons, selectedLessonId]);
 
-    const onLogout = () => {
-        dispatch(logout());
-        navigate("/login", { replace: true });
-    };
-
     const onAvatarUpload = async (avatarUrl: string) => {
         try {
             const updatedUser = await updateMyAvatar(avatarUrl);
             dispatch(setUser(updatedUser));
         } catch (uploadError) {
-            throw new Error(getApiErrorMessage(uploadError, "Failed to upload avatar."));
+            throw new Error(getApiErrorMessage(uploadError, t("messages.uploadAvatarFailed")));
         }
     };
 
@@ -232,39 +227,39 @@ const ProfileDashboard = () => {
             const course = await createCourse(newCourseTitle.trim(), newCourseDescription.trim());
             setCourses((prev) => [...prev, course]);
             setSelectedCourseId(course.id);
-            setTeacherMessage("Course created.");
+            setTeacherMessage(t("messages.courseCreated"));
             setNewCourseTitle("");
             setNewCourseDescription("");
             await reloadManageableCourses();
         } catch (submitError) {
-            setTeacherError(getApiErrorMessage(submitError, "Failed to create course."));
+            setTeacherError(getApiErrorMessage(submitError, t("messages.createCourseFailed")));
         }
     };
 
     const onUpdateCourse = async () => {
         if (!selectedCourseId) {
-            setTeacherError("Select course first.");
+            setTeacherError(t("messages.selectCourse"));
             return;
         }
         try {
             setTeacherError(null);
             await updateCourse(selectedCourseId, courseEditTitle.trim(), courseEditDescription.trim());
             await reloadManageableCourses();
-            setTeacherMessage("Course updated.");
+            setTeacherMessage(t("messages.courseUpdated"));
         } catch (submitError) {
-            setTeacherError(getApiErrorMessage(submitError, "Failed to update course."));
+            setTeacherError(getApiErrorMessage(submitError, t("messages.updateCourseFailed")));
         }
     };
 
     const onAddTeacher = async () => {
         if (!selectedCourseId) {
-            setTeacherError("Select course first.");
+            setTeacherError(t("messages.selectCourse"));
             return;
         }
 
         const teacherUserId = Number(teacherToAssign);
         if (!Number.isInteger(teacherUserId) || teacherUserId <= 0) {
-            setTeacherError("Enter valid teacher user ID.");
+            setTeacherError(t("messages.validTeacherId"));
             return;
         }
 
@@ -272,16 +267,16 @@ const ProfileDashboard = () => {
             setTeacherError(null);
             await addTeacherToCourse(selectedCourseId, teacherUserId);
             setTeacherToAssign("");
-            setTeacherMessage("Teacher added to course.");
+            setTeacherMessage(t("messages.teacherAdded"));
             await reloadManageableCourses();
         } catch (submitError) {
-            setTeacherError(getApiErrorMessage(submitError, "Failed to add teacher to course."));
+            setTeacherError(getApiErrorMessage(submitError, t("messages.addTeacherFailed")));
         }
     };
 
     const onCreateLesson = async () => {
         if (!selectedCourseId) {
-            setTeacherError("Select course first.");
+            setTeacherError(t("messages.selectCourse"));
             return;
         }
         try {
@@ -294,54 +289,54 @@ const ProfileDashboard = () => {
             });
             setTeacherLessons((prev) => [...prev, lesson]);
             setSelectedLessonId(lesson.id);
-            setTeacherMessage("Lesson created.");
+            setTeacherMessage(t("messages.lessonCreated"));
             setNewLessonTitle("");
             setNewLessonContent("");
             setNewLessonOrder("0");
         } catch (submitError) {
-            setTeacherError(getApiErrorMessage(submitError, "Failed to create lesson."));
+            setTeacherError(getApiErrorMessage(submitError, t("messages.createLessonFailed")));
         }
     };
 
     const onDeleteCourse = async () => {
         if (!selectedCourseId) {
-            setTeacherError("Select course first.");
+            setTeacherError(t("messages.selectCourse"));
             return;
         }
         try {
             setTeacherError(null);
             await deleteCourse(selectedCourseId);
-            setTeacherMessage("Course deleted.");
+            setTeacherMessage(t("messages.courseDeleted"));
             setSelectedCourseId(null);
             setSelectedLessonId(null);
             await reloadManageableCourses();
         } catch (submitError) {
-            setTeacherError(getApiErrorMessage(submitError, "Failed to delete course."));
+            setTeacherError(getApiErrorMessage(submitError, t("messages.deleteCourseFailed")));
         }
     };
 
     const onDeleteLesson = async () => {
         if (!selectedLessonId) {
-            setTeacherError("Select lesson first.");
+            setTeacherError(t("messages.selectLesson"));
             return;
         }
         try {
             setTeacherError(null);
             await deleteLesson(selectedLessonId);
-            setTeacherMessage("Lesson deleted.");
+            setTeacherMessage(t("messages.lessonDeleted"));
             if (selectedCourseId) {
                 const lessons = await getLessonsByCourse(selectedCourseId);
                 setTeacherLessons(lessons);
                 setSelectedLessonId(lessons[0]?.id ?? null);
             }
         } catch (submitError) {
-            setTeacherError(getApiErrorMessage(submitError, "Failed to delete lesson."));
+            setTeacherError(getApiErrorMessage(submitError, t("messages.deleteLessonFailed")));
         }
     };
 
     const onCreateTest = async () => {
         if (!selectedLessonId) {
-            setTeacherError("Select lesson first.");
+            setTeacherError(t("messages.selectLesson"));
             return;
         }
 
@@ -357,7 +352,7 @@ const ProfileDashboard = () => {
             .filter((question) => question.text.length > 0);
 
         if (normalizedQuestions.length === 0) {
-            setTeacherError("Add at least one valid question.");
+            setTeacherError(t("messages.validQuestion"));
             return;
         }
 
@@ -366,7 +361,7 @@ const ProfileDashboard = () => {
                 (question) => question.answers.length < 2 || question.correctAnswerIndex >= question.answers.length
             )
         ) {
-            setTeacherError("Each question needs at least 2 answers and valid correct answer.");
+            setTeacherError(t("messages.validAnswers"));
             return;
         }
 
@@ -384,7 +379,7 @@ const ProfileDashboard = () => {
                     })),
                 })),
             });
-            setTeacherMessage("Test created.");
+            setTeacherMessage(t("messages.testCreated"));
             setNewTestTitle("");
             setQuestions([createEmptyQuestion()]);
             if (selectedCourseId) {
@@ -392,20 +387,20 @@ const ProfileDashboard = () => {
                 setTeacherLessons(lessons);
             }
         } catch (submitError) {
-            setTeacherError(getApiErrorMessage(submitError, "Failed to create test."));
+            setTeacherError(getApiErrorMessage(submitError, t("messages.createTestFailed")));
         }
     };
 
     const onDeleteSelectedTest = async () => {
         if (!selectedLessonTestId) {
-            setTeacherError("Select test to delete.");
+            setTeacherError(t("messages.selectTest"));
             return;
         }
 
         try {
             setTeacherError(null);
             await deleteTest(selectedLessonTestId);
-            setTeacherMessage("Test deleted.");
+            setTeacherMessage(t("messages.testDeleted"));
             if (selectedCourseId) {
                 const lessons = await getLessonsByCourse(selectedCourseId);
                 setTeacherLessons(lessons);
@@ -414,7 +409,7 @@ const ProfileDashboard = () => {
                 setCourseAttempts(await getCourseTestAttempts(selectedCourseId));
             }
         } catch (submitError) {
-            setTeacherError(getApiErrorMessage(submitError, "Failed to delete test."));
+            setTeacherError(getApiErrorMessage(submitError, t("messages.deleteTestFailed")));
         }
     };
 
@@ -477,10 +472,10 @@ const ProfileDashboard = () => {
         try {
             setAdminError(null);
             await updateUserRole(userId, ROLE_IDS.TEACHER);
-            setAdminMessage("User promoted to teacher.");
+            setAdminMessage(t("messages.userPromoted"));
             setAdminUsers(await getUsers());
         } catch (submitError) {
-            setAdminError(getApiErrorMessage(submitError, "Failed to update user role."));
+            setAdminError(getApiErrorMessage(submitError, t("messages.updateRoleFailed")));
         }
     };
 
@@ -488,10 +483,12 @@ const ProfileDashboard = () => {
         try {
             setAdminError(null);
             await moderateCourse(courseId, status);
-            setAdminMessage(`Course ${status === "APPROVED" ? "approved" : "rejected"}.`);
+            setAdminMessage(
+                status === "APPROVED" ? t("messages.courseApproved") : t("messages.courseRejected")
+            );
             setPendingCourses(await getPendingCourses());
         } catch (submitError) {
-            setAdminError(getApiErrorMessage(submitError, "Failed to moderate course."));
+            setAdminError(getApiErrorMessage(submitError, t("messages.moderateFailed")));
         }
     };
 
@@ -530,42 +527,50 @@ const ProfileDashboard = () => {
     return (
         <main className="page">
             <header className="page-header">
-                <h1 className="page-title">Profile</h1>
-                <Link to="/courses">Back to courses</Link>
+                <div>
+                    <h1 className="page-title">{t("profile.title")}</h1>
+                    <p className="page-subtitle">{t("profile.subtitle")}</p>
+                </div>
             </header>
 
-            <section className="card">
-                <AvatarUploader avatarUrl={user?.avatarUrl} onUpload={onAvatarUpload} />
-                <p>
-                    <strong>Name:</strong> {user?.name ?? "Not set"}
-                </p>
-                <p>
-                    <strong>Email:</strong> {user?.email ?? "Unknown"}
-                </p>
-                <p>
-                    <strong>User ID:</strong> {user?.id ?? "Unknown"}
-                </p>
-                <p>
-                    <strong>Role ID:</strong> {user?.roleId ?? "Unknown"}
-                </p>
+            <section className="card page-section">
+                <div className="profile-header" style={{ border: "none", margin: 0, padding: 0 }}>
+                    <AvatarUploader avatarUrl={user?.avatarUrl} onUpload={onAvatarUpload} />
+                    <div className="profile-info">
+                        <p className="profile-name">{user?.name ?? t("profile.notSet")}</p>
+                        <p className="profile-email">{user?.email ?? t("common.unknown")}</p>
+                        <div className="profile-meta">
+                            <span className="chip chip-pending">
+                                {t("common.id")} {user?.id ?? "—"}
+                            </span>
+                            <span className="chip chip-pending">
+                                {t("common.role")} {user?.roleId ?? "—"}
+                            </span>
+                        </div>
+                    </div>
+                </div>
             </section>
 
-            <CollapsibleSection title="Course Progress" defaultOpen>
-                {loading ? <p>Loading progress...</p> : null}
+            <CollapsibleSection title={t("profile.courseProgress")} defaultOpen>
+                {loading ? <p>{t("profile.loadingProgress")}</p> : null}
                 {error ? <p className="auth-error">{error}</p> : null}
                 {!loading && !error && progress?.courseProgress.length === 0 ? (
-                    <p>No course progress yet.</p>
+                    <p>{t("profile.noProgress")}</p>
                 ) : null}
                 {progress?.courseProgress.map((item) => (
                     <p key={item.id}>
-                        {item.course.title}: {item.progressPercent}% ({item.completedLessons} lessons)
+                        {t("profile.progressLine", {
+                            title: item.course.title,
+                            percent: item.progressPercent,
+                            lessons: item.completedLessons,
+                        })}
                     </p>
                 ))}
             </CollapsibleSection>
 
-            <CollapsibleSection title="Test Attempts">
+            <CollapsibleSection title={t("profile.testAttempts")}>
                 {!loading && !error && progress?.testAttempts.length === 0 ? (
-                    <p>No test attempts yet.</p>
+                    <p>{t("profile.noAttempts")}</p>
                 ) : null}
                 {progress && progress.testAttempts.length > 0 ? (
                     <>
@@ -578,7 +583,7 @@ const ProfileDashboard = () => {
                             onChange={(event) => setSelectedTestId(Number(event.target.value))}
                         >
                             <option value="" disabled>
-                                Choose test
+                                {t("profile.chooseTest")}
                             </option>
                             {Object.entries(groupedAttempts).map(([testId, attempts]) => (
                                 <option key={testId} value={testId}>
@@ -590,45 +595,49 @@ const ProfileDashboard = () => {
                 ) : null}
                 {selectedAttempts.map((attempt) => (
                     <p key={attempt.id}>
-                        [{new Date(attempt.createdAt).toLocaleString()}] Score: {attempt.score}/{attempt.total}
+                        {t("profile.attemptLine", {
+                            date: new Date(attempt.createdAt).toLocaleString(),
+                            score: attempt.score,
+                            total: attempt.total,
+                        })}
                     </p>
                 ))}
             </CollapsibleSection>
 
             {isTeacher ? (
-                <CollapsibleSection title="Teacher Panel">
+                <CollapsibleSection title={t("profile.teacherPanel")}>
                     {teacherError ? <p className="auth-error">{teacherError}</p> : null}
                     {teacherMessage ? <p>{teacherMessage}</p> : null}
                     <p>
-                        <strong>Your courses:</strong> {courses.length}
+                        <strong>{t("profile.yourCourses")}:</strong> {courses.length}
                     </p>
 
-                    <CollapsibleSection title="Create course">
+                    <CollapsibleSection title={t("profile.createCourse")}>
                         <div className="form-block">
                             <input
-                                placeholder="Course title"
+                                placeholder={t("profile.courseTitle")}
                                 value={newCourseTitle}
                                 onChange={(event) => setNewCourseTitle(event.target.value)}
                             />
                             <textarea
-                                placeholder="Course description"
+                                placeholder={t("profile.courseDescription")}
                                 value={newCourseDescription}
                                 onChange={(event) => setNewCourseDescription(event.target.value)}
                             />
-                            <button type="button" onClick={onCreateCourse}>
-                                Create course
+                            <button type="button" className="btn-primary" onClick={onCreateCourse}>
+                                {t("profile.createCourseBtn")}
                             </button>
                         </div>
                     </CollapsibleSection>
 
-                    <CollapsibleSection title="Edit selected course">
+                    <CollapsibleSection title={t("profile.editCourse")}>
                         <div className="form-block">
                             <select
                                 value={selectedCourseId ?? ""}
                                 onChange={(event) => setSelectedCourseId(Number(event.target.value))}
                             >
                                 <option value="" disabled>
-                                    Choose course
+                                    {t("profile.chooseCourse")}
                                 </option>
                                 {courses.map((course) => (
                                     <option key={course.id} value={course.id}>
@@ -637,32 +646,32 @@ const ProfileDashboard = () => {
                                 ))}
                             </select>
                             <input
-                                placeholder="Updated title"
+                                placeholder={t("profile.updatedTitle")}
                                 value={courseEditTitle}
                                 onChange={(event) => setCourseEditTitle(event.target.value)}
                             />
                             <textarea
-                                placeholder="Updated description"
+                                placeholder={t("profile.updatedDescription")}
                                 value={courseEditDescription}
                                 onChange={(event) => setCourseEditDescription(event.target.value)}
                             />
-                            <button type="button" onClick={onUpdateCourse}>
-                                Save course changes
+                            <button type="button" className="btn-primary" onClick={onUpdateCourse}>
+                                {t("profile.saveCourse")}
                             </button>
                             <button type="button" className="ghost-button" onClick={onDeleteCourse}>
-                                Delete selected course
+                                {t("profile.deleteCourse")}
                             </button>
                         </div>
                     </CollapsibleSection>
 
-                    <CollapsibleSection title="Create lesson">
+                    <CollapsibleSection title={t("profile.createLesson")}>
                         <div className="form-block">
                             <select
                                 value={selectedCourseId ?? ""}
                                 onChange={(event) => setSelectedCourseId(Number(event.target.value))}
                             >
                                 <option value="" disabled>
-                                    Choose course
+                                    {t("profile.chooseCourse")}
                                 </option>
                                 {courses.map((course) => (
                                     <option key={course.id} value={course.id}>
@@ -671,60 +680,60 @@ const ProfileDashboard = () => {
                                 ))}
                             </select>
                             <input
-                                placeholder="Lesson title"
+                                placeholder={t("profile.lessonTitle")}
                                 value={newLessonTitle}
                                 onChange={(event) => setNewLessonTitle(event.target.value)}
                             />
                             <textarea
-                                placeholder="Lesson content"
+                                placeholder={t("profile.lessonContent")}
                                 value={newLessonContent}
                                 onChange={(event) => setNewLessonContent(event.target.value)}
                             />
                             <input
-                                placeholder="Lesson position in course (0, 1, 2...)"
+                                placeholder={t("profile.lessonOrder")}
                                 type="number"
                                 value={newLessonOrder}
                                 onChange={(event) => setNewLessonOrder(event.target.value)}
                             />
-                            <button type="button" onClick={onCreateLesson}>
-                                Create lesson
+                            <button type="button" className="btn-primary" onClick={onCreateLesson}>
+                                {t("profile.createLessonBtn")}
                             </button>
                             <select
                                 value={selectedLessonId ?? ""}
                                 onChange={(event) => setSelectedLessonId(Number(event.target.value))}
                             >
                                 <option value="" disabled>
-                                    Select lesson to delete
+                                    {t("profile.selectLessonDelete")}
                                 </option>
                                 {teacherLessons.map((lesson, index) => (
                                     <option key={lesson.id} value={lesson.id}>
-                                        Lesson #{index + 1}: {lesson.title}
+                                        {t("profile.lessonOption", { n: index + 1, title: lesson.title })}
                                     </option>
                                 ))}
                             </select>
                             <button type="button" className="ghost-button" onClick={onDeleteLesson}>
-                                Delete selected lesson
+                                {t("profile.deleteLesson")}
                             </button>
                         </div>
                     </CollapsibleSection>
 
-                    <CollapsibleSection title="Create test">
+                    <CollapsibleSection title={t("profile.createTest")}>
                         <div className="form-block">
                             <select
                                 value={selectedLessonId ?? ""}
                                 onChange={(event) => setSelectedLessonId(Number(event.target.value))}
                             >
                                 <option value="" disabled>
-                                    Choose lesson
+                                    {t("profile.chooseLesson")}
                                 </option>
                                 {teacherLessons.map((lesson, index) => (
                                     <option key={lesson.id} value={lesson.id}>
-                                        Lesson #{index + 1}: {lesson.title}
+                                        {t("profile.lessonOption", { n: index + 1, title: lesson.title })}
                                     </option>
                                 ))}
                             </select>
                             <input
-                                placeholder="Test title"
+                                placeholder={t("profile.testTitle")}
                                 value={newTestTitle}
                                 onChange={(event) => setNewTestTitle(event.target.value)}
                             />
@@ -732,18 +741,18 @@ const ProfileDashboard = () => {
                             {questions.map((question, questionIndex) => (
                                 <div key={`question-${questionIndex}`} className="card">
                                     <div className="inline-row">
-                                        <strong>Question #{questionIndex + 1}</strong>
+                                        <strong>{t("profile.questionN", { n: questionIndex + 1 })}</strong>
                                         <button
                                             type="button"
                                             className="ghost-button"
                                             onClick={() => removeQuestion(questionIndex)}
                                             disabled={questions.length <= 1}
                                         >
-                                            Remove question
+                                            {t("profile.removeQuestion")}
                                         </button>
                                     </div>
                                     <input
-                                        placeholder="Question text"
+                                        placeholder={t("profile.questionText")}
                                         value={question.text}
                                         onChange={(event) =>
                                             updateQuestion(questionIndex, { text: event.target.value })
@@ -752,7 +761,7 @@ const ProfileDashboard = () => {
                                     {question.answers.map((answer, answerIndex) => (
                                         <div key={`question-${questionIndex}-answer-${answerIndex}`} className="answer-row">
                                             <input
-                                                placeholder={`Answer option #${answerIndex + 1}`}
+                                                placeholder={t("profile.answerN", { n: answerIndex + 1 })}
                                                 value={answer}
                                                 onChange={(event) =>
                                                     updateQuestionAnswer(questionIndex, answerIndex, event.target.value)
@@ -764,7 +773,7 @@ const ProfileDashboard = () => {
                                                 onClick={() => removeAnswerFromQuestion(questionIndex, answerIndex)}
                                                 disabled={question.answers.length <= 2}
                                             >
-                                                Remove
+                                                {t("profile.remove")}
                                             </button>
                                         </div>
                                     ))}
@@ -773,7 +782,7 @@ const ProfileDashboard = () => {
                                         className="ghost-button"
                                         onClick={() => addAnswerToQuestion(questionIndex)}
                                     >
-                                        Add answer option
+                                        {t("profile.addAnswer")}
                                     </button>
                                     <select
                                         value={question.correctAnswerIndex}
@@ -785,7 +794,7 @@ const ProfileDashboard = () => {
                                     >
                                         {question.answers.map((_, index) => (
                                             <option key={`correct-${questionIndex}-${index}`} value={index}>
-                                                Correct answer: option #{index + 1}
+                                                {t("profile.correctAnswer", { n: index + 1 })}
                                             </option>
                                         ))}
                                     </select>
@@ -793,10 +802,10 @@ const ProfileDashboard = () => {
                             ))}
 
                             <button type="button" className="ghost-button" onClick={addQuestion}>
-                                Add one more question
+                                {t("profile.addQuestion")}
                             </button>
-                            <button type="button" onClick={onCreateTest}>
-                                Create test
+                            <button type="button" className="btn-primary" onClick={onCreateTest}>
+                                {t("profile.createTestBtn")}
                             </button>
 
                             <select
@@ -804,7 +813,7 @@ const ProfileDashboard = () => {
                                 onChange={(event) => setSelectedLessonTestId(Number(event.target.value))}
                             >
                                 <option value="" disabled>
-                                    Select test to delete
+                                    {t("profile.selectTestDelete")}
                                 </option>
                                 {selectedLesson?.tests?.map((test) => (
                                     <option key={test.id} value={test.id}>
@@ -813,41 +822,49 @@ const ProfileDashboard = () => {
                                 ))}
                             </select>
                             <button type="button" className="ghost-button" onClick={onDeleteSelectedTest}>
-                                Delete selected test
+                                {t("profile.deleteTest")}
                             </button>
                         </div>
                     </CollapsibleSection>
 
-                    <CollapsibleSection title="Add teacher to selected course">
+                    <CollapsibleSection title={t("profile.addTeacher")}>
                         <div className="form-block">
                             <p className="muted-text">
-                                Your ID: <strong>{user?.id ?? "-"}</strong>
+                                {t("profile.yourId")}: <strong>{user?.id ?? "-"}</strong>
                             </p>
                             <div className="inline-row">
                                 <input
-                                    placeholder="Teacher user ID"
+                                    placeholder={t("profile.teacherUserId")}
                                     value={teacherToAssign}
                                     onChange={(event) => setTeacherToAssign(event.target.value)}
                                 />
-                                <button type="button" onClick={onAddTeacher}>
-                                    Add teacher
+                                <button type="button" className="btn-primary" onClick={onAddTeacher}>
+                                    {t("profile.addTeacherBtn")}
                                 </button>
                             </div>
                             {selectedCourse?.teachers?.map((teacherRelation) => (
                                 <p key={teacherRelation.id}>
-                                    Teacher: {teacherRelation.user.name} ({teacherRelation.user.email})
+                                    {t("profile.teacherLine", {
+                                        name: teacherRelation.user.name,
+                                        email: teacherRelation.user.email,
+                                    })}
                                 </p>
                             ))}
                         </div>
                     </CollapsibleSection>
 
                     <div className="form-block">
-                        <h3>Course test attempts</h3>
-                        {courseAttempts.length === 0 ? <p>No attempts for selected course.</p> : null}
+                        <h3>{t("profile.courseAttempts")}</h3>
+                        {courseAttempts.length === 0 ? <p>{t("profile.noAttemptsCourse")}</p> : null}
                         {courseAttempts.map((attempt) => (
                             <p key={attempt.id}>
-                                [{new Date(attempt.createdAt).toLocaleString()}] {attempt.user.email} - {attempt.test.title}:{" "}
-                                {attempt.score}/{attempt.total}
+                                {t("profile.attemptCourseLine", {
+                                    date: new Date(attempt.createdAt).toLocaleString(),
+                                    email: attempt.user.email,
+                                    test: attempt.test.title,
+                                    score: attempt.score,
+                                    total: attempt.total,
+                                })}
                             </p>
                         ))}
                     </div>
@@ -855,21 +872,25 @@ const ProfileDashboard = () => {
             ) : null}
 
             {isAdmin ? (
-                <CollapsibleSection title="Admin Panel">
+                <CollapsibleSection title={t("profile.adminPanel")}>
                     {adminError ? <p className="auth-error">{adminError}</p> : null}
                     {adminMessage ? <p>{adminMessage}</p> : null}
 
                     <div className="form-block">
-                        <h3>User role management</h3>
+                        <h3>{t("profile.userRoles")}</h3>
                         <input
-                            placeholder="Search by id, name or email"
+                            placeholder={t("profile.searchUsers")}
                             value={userSearchQuery}
                             onChange={(event) => setUserSearchQuery(event.target.value)}
                         />
                         {filteredAdminUsers.map((adminUser) => (
                             <div key={adminUser.id} className="inline-row">
                                 <span>
-                                    #{adminUser.id} {adminUser.email} (role: {adminUser.roleId})
+                                    {t("profile.userLine", {
+                                        id: adminUser.id,
+                                        email: adminUser.email,
+                                        role: adminUser.roleId,
+                                    })}
                                 </span>
                                 {adminUser.roleId !== ROLE_IDS.TEACHER && adminUser.roleId !== ROLE_IDS.ADMIN ? (
                                     <button
@@ -877,7 +898,7 @@ const ProfileDashboard = () => {
                                         className="ghost-button"
                                         onClick={() => onPromoteToTeacher(adminUser.id)}
                                     >
-                                        Promote to teacher
+                                        {t("profile.promoteTeacher")}
                                     </button>
                                 ) : null}
                             </div>
@@ -885,8 +906,8 @@ const ProfileDashboard = () => {
                     </div>
 
                     <div className="form-block">
-                        <h3>Pending courses moderation</h3>
-                        {pendingCourses.length === 0 ? <p>No pending courses.</p> : null}
+                        <h3>{t("profile.pendingCourses")}</h3>
+                        {pendingCourses.length === 0 ? <p>{t("profile.noPending")}</p> : null}
                         {pendingCourses.map((course) => (
                             <div key={course.id} className="card">
                                 <p>
@@ -896,18 +917,23 @@ const ProfileDashboard = () => {
                                 </p>
                                 <p>{course.description}</p>
                                 <p className="muted-text">
-                                    Author: {course.author?.name ?? course.author?.email ?? "Unknown"}
+                                    {t("profile.author")}:{" "}
+                                    {course.author?.name ?? course.author?.email ?? t("common.unknown")}
                                 </p>
                                 <div className="inline-row">
-                                    <button type="button" onClick={() => onModerateCourse(course.id, "APPROVED")}>
-                                        Approve
+                                    <button
+                                        type="button"
+                                        className="btn-primary"
+                                        onClick={() => onModerateCourse(course.id, "APPROVED")}
+                                    >
+                                        {t("profile.approve")}
                                     </button>
                                     <button
                                         type="button"
                                         className="ghost-button"
                                         onClick={() => onModerateCourse(course.id, "REJECTED")}
                                     >
-                                        Reject
+                                        {t("profile.reject")}
                                     </button>
                                 </div>
                             </div>
@@ -916,9 +942,6 @@ const ProfileDashboard = () => {
                 </CollapsibleSection>
             ) : null}
 
-            <button type="button" className="ghost-button" onClick={onLogout}>
-                Sign out
-            </button>
         </main>
     );
 };
